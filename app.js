@@ -1,41 +1,59 @@
-let key = "cc8d4149e9ea4ef3a36b22fe84e75440";
 let carddata = document.querySelector(".carddata");
 let searchbtn = document.getElementById("searchbtn");
 let inputdata = document.getElementById("inputdata");
 
+// Function to load API key from config.json
+const getAPIKey = async () => {
+    try {
+        const response = await fetch("./config.json");
+        const data = await response.json();
+        return data.API_KEY;
+    } catch (error) {
+        console.error("Error loading API key:", error);
+        return null;
+    }
+};
 
-const getdata = async(input)=>{
-    let res = await fetch(`https://newsapi.org/v2/everything?q=${input}&apiKey=${key}`);
-    let jsondata = await res.json();
-    // console.log(jsondata.articles[0].title);
-    carddata.innerHTML = ``;
-    jsondata.articles.forEach((article) => {
-        // if(!article.urlToImage) continue;
-        let divs = document.createElement("div");
-        divs.classList.add("card");
-        carddata.appendChild(divs);
-    
-        divs.innerHTML = `
-    
-            <img src="${article.urlToImage}" alt="">
-            <h3>${article.title}</h3>
-            <p>${article.description.slice(0,140)+"...."}</p>
-    
-        `
-    });
+const getdata = async (input) => {
+    try {
+        const key = await getAPIKey(); // Load API key dynamically
+        if (!key) {
+            carddata.innerHTML = "<p>Error loading API key. Please try again later.</p>";
+            return;
+        }
 
+        let res = await fetch(`https://newsapi.org/v2/everything?q=${input}&apiKey=${key}`);
+        let jsondata = await res.json();
 
-   
+        if (!jsondata.articles || jsondata.articles.length === 0) {
+            carddata.innerHTML = "<p>No results found</p>";
+            return;
+        }
 
-}
+        carddata.innerHTML = "";
+        jsondata.articles.forEach((article) => {
+            if (!article || !article.urlToImage) return;
 
-window.addEventListener("load",()=>{
-    getdata("india");
-})
+            let divs = document.createElement("div");
+            divs.classList.add("card");
 
-searchbtn.addEventListener("click",function(){
-    let inputtext = inputdata.value;
-    getdata(inputtext);
+            divs.innerHTML = `
+                <img src="${article.urlToImage || 'https://via.placeholder.com/150'}" alt="News Image">
+                <h3>${article.title}</h3>
+                <p>${article.description ? article.description.slice(0, 140) + "..." : "No description available"}</p>
+            `;
 
-})
+            carddata.appendChild(divs);
+        });
+    } catch (error) {
+        console.error("Error fetching data:", error);
+        carddata.innerHTML = "<p>Error fetching news. Please try again later.</p>";
+    }
+};
 
+window.addEventListener("load", () => getdata("india"));
+
+searchbtn.addEventListener("click", () => {
+    let inputtext = inputdata.value.trim();
+    if (inputtext) getdata(inputtext);
+});
